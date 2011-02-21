@@ -1,0 +1,13 @@
+Comment IP Whitelist
+
+A Drupal module to allow anonymous comment whitelist/blacklisting 
+by IP address.  Only works if commenting (with later approval) is 
+enabled for anonymous users.
+
+
+Developed by:
+* Geoffrey Roberts, g.roberts@blackicemedia.com
+
+
+This software is licensed under GPL Version 2
+See LICENSE.txt

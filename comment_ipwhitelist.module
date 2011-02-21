@@ -55,7 +55,11 @@ function comment_ipwhitelist_whitelist( $comment_id )
 		'IP !ip whitelisted.',
 		array('!ip' => $comment->hostname)
 	));
-	drupal_goto('comment/'.$comment->cid);
+	
+	if( isset($_REQUEST['return']) )
+		drupal_goto(filter_xss($_REQUEST['return']));
+	else
+		drupal_goto('comment/'.$comment->cid);
 }
 function comment_ipwhitelist_blacklist( $comment_id )
 {
@@ -92,7 +96,10 @@ function comment_ipwhitelist_blacklist( $comment_id )
 		array('!ip' => $comment->hostname)
 	));
 	
-	drupal_goto('comment/'.$comment->cid);
+	if( isset($_REQUEST['return']) )
+		drupal_goto(filter_xss($_REQUEST['return']));
+	else
+		drupal_goto('comment/'.$comment->cid);
 }
 
 function comment_ipwhitelist_form_alter(&$form, &$form_state, $form_id)
@@ -151,6 +158,27 @@ function comment_ipwhitelist_comment_insert($comment)
 		{
 			comment_delete($comment->cid);
 		}
+	}
+}
+
+function comment_ipwhitelist_comment_view($comment, $view_mode, $langcode)
+{
+	if( user_access('administer comments') )
+	{
+		$comment->content['links']['comment']['#links']['ip_whitelist'] = array(
+			'title' => 'IP whitelist',
+			'href'  => 'comment/'.$comment->cid.'/ip-whitelist',
+			'attributes' => array(
+				'return' => current_path(),
+			),
+		);
+		$comment->content['links']['comment']['#links']['ip_blacklist'] = array(
+			'title' => 'IP blacklist',
+			'href'  => 'comment/'.$comment->cid.'/ip-blacklist',
+			'attributes' => array(
+				'return' => current_path(),
+			),
+		);
 	}
 }
 
