@@ -1,0 +1,8 @@
+
+name = "Comment IP Whitelist"
+description = "Allows comment white/blacklisting by IP"
+package = "ABDN"
+core = 7.x
+dependencies[] = comment
+
+

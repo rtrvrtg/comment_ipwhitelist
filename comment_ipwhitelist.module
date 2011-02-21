@@ -1,0 +1,156 @@
+<?php
+
+function comment_ipwhitelist_menu()
+{
+	$items['comment/%/ip-whitelist'] = array(
+		'title' => 'Whitelist IP', 
+		'page callback' => 'comment_ipwhitelist_whitelist', 
+		'page arguments' => array(1), 
+		'access arguments' => array('administer comments'), 
+		'type' => MENU_LOCAL_TASK, 
+		'weight' => 10,
+	);
+	$items['comment/%/ip-blacklist'] = array(
+		'title' => 'Blacklist IP', 
+		'page callback' => 'comment_ipwhitelist_blacklist', 
+		'page arguments' => array(1), 
+		'access arguments' => array('administer comments'), 
+		'type' => MENU_LOCAL_TASK, 
+		'weight' => 11,		
+	);
+	return $items;
+}
+
+function comment_ipwhitelist_whitelist( $comment_id )
+{
+	$comment = comment_load($comment_id);
+	
+	$valid = db_query(
+		"SELECT valid FROM {comment_ipwhitelist} WHERE hostname = :hostname", 
+		array(':hostname' => $comment->hostname)
+	)->fetchObject();
+	
+	if( $valid !== false )
+	{
+		db_query(
+			"UPDATE {comment_ipwhitelist} SET valid = :valid WHERE hostname = :hostname",
+			array(
+				":valid" => 1,
+				":hostname" => $comment->hostname,
+			)
+		);
+	}
+	else
+	{
+		db_query(
+			"INSERT INTO {comment_ipwhitelist} VALUES (:hostname, :valid)",
+			array(
+				":hostname" => $comment->hostname,
+				":valid" => 1,
+			)
+		);
+	}
+	
+	drupal_set_message(t(
+		'IP !ip whitelisted.',
+		array('!ip' => $comment->hostname)
+	));
+	drupal_goto('comment/'.$comment->cid);
+}
+function comment_ipwhitelist_blacklist( $comment_id )
+{
+	$comment = comment_load($comment_id);
+	
+	$valid = db_query(
+		"SELECT valid FROM {comment_ipwhitelist} WHERE hostname = :hostname", 
+		array(':hostname' => $comment->hostname)
+	)->fetchObject();
+	
+	if( $valid !== false )
+	{
+		db_query(
+			"UPDATE {comment_ipwhitelist} SET valid = :valid WHERE hostname = :hostname",
+			array(
+				":valid" => 0,
+				":hostname" => $comment->hostname,
+			)
+		);
+	}
+	else
+	{
+		db_query(
+			"INSERT INTO {comment_ipwhitelist} VALUES (:hostname, :valid)",
+			array(
+				":hostname" => $comment->hostname,
+				":valid" => 0,
+			)
+		);
+	}
+	
+	drupal_set_message(t(
+		'IP !ip blacklisted.',
+		array('!ip' => $comment->hostname)
+	));
+	
+	drupal_goto('comment/'.$comment->cid);
+}
+
+function comment_ipwhitelist_form_alter(&$form, &$form_state, $form_id)
+{
+	if( !preg_match('/comment_[a-z_]+form/', $form_id) ) return;
+	global $user;
+	
+	if( $user->uid != 0 ) return;
+	
+	$valid = db_query(
+		"SELECT valid FROM {comment_ipwhitelist} WHERE hostname = :hostname", 
+		array(':hostname' => ip_address())
+	)->fetchObject();
+	
+	if( is_object($valid) )
+	{
+		if($valid->valid == 0)
+		{
+			$form['error'] = array(
+				'#markup' => '<p>'.t('A spammer using the IP address !ip has been discovered to be spamming this site.  You are not allowed to comment.', array('!ip' => ip_address())).'</p>',
+			);
+			
+			unset($form['name']);
+			unset($form['author']);			
+			unset($form['subject']);
+			unset($form['comment_body']);
+			unset($form['actions']);
+		}
+	}
+	else
+	{
+		$form['ip_validation'] = array(
+			'#markup' => '<p>'.t('If it\'s your first time leaving a comment, you\'ll need to wait for the comment to be manually approved; we do this to filter spam.').'</p>',
+			'#weight' => -50
+		);
+	}
+}
+
+function comment_ipwhitelist_comment_insert($comment)
+{
+	global $user;
+	if( $user->uid != 0 ) return;
+	
+	$valid = db_query(
+		"SELECT valid FROM {comment_ipwhitelist} WHERE hostname = :hostname", 
+		array(':hostname' => ip_address())
+	)->fetchObject();
+	if( $valid !== false )
+	{
+		if($valid->valid == 1)
+		{
+			$comment->status = COMMENT_PUBLISHED;
+			comment_save($comment);
+		}
+		else
+		{
+			comment_delete($comment->cid);
+		}
+	}
+}
+

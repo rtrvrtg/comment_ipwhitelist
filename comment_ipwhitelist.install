@@ -1,0 +1,29 @@
+<?php
+
+function comment_ipwhitelist_schema()
+{
+ $schema['comment_ipwhitelist'] = array(
+    'description' => 'Sets a whitelist for anonymous comments.', 
+    'fields' => array(
+      'hostname' => array(
+        'type' => 'varchar', 
+        'length' => 128, 
+        'not null' => TRUE, 
+        'default' => '', 
+        'description' => "The author's host name.",
+      ), 
+      'valid' => array(
+        'type' => 'int', 
+        'not null' => TRUE, 
+        'default' => 0, 
+        'description' => 'Sets whether author can post: 1 is whitelisted, 0 is blacklisted.',
+      ), 
+    ), 
+    'indexes' => array(
+      'comment_ipwhitelist_valid' => array('hostname', 'valid'), 
+    ), 
+    'primary key' => array('hostname'),
+  );
+
+  return $schema;
+}
